@@ -165,3 +165,32 @@ def border_mask(height, width, reverse=False, dtype=torch.float32,
         mask = 1 - mask
 
     return mask.reshape(1, 1, height, width)
+
+def quadrant_mask(height, width, reverse=False,
+                           dtype=torch.float32, device=None, requires_grad=False):
+    """
+    Mask where diagonal quadrants are 1:
+    
+        1 1 | 0 0
+        1 1 | 0 0
+        ----+----
+        0 0 | 1 1
+        0 0 | 1 1
+    """
+
+    h2, w2 = height // 2, width // 2
+
+    mask_arr = [[0 for _ in range(width)] for _ in range(height)]
+
+    for i in range(height):
+        for j in range(width):
+            # Top-left OR bottom-right
+            if (i < h2 and j < w2) or (i >= h2 and j >= w2):
+                mask_arr[i][j] = 1
+
+    mask = torch.tensor(mask_arr, dtype=dtype, device=device, requires_grad=requires_grad)
+
+    if reverse:
+        mask = 1 - mask
+
+    return mask.reshape(1, 1, height, width)

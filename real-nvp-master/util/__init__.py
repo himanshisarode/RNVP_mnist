@@ -12,7 +12,7 @@ from util.array_util import (
     horizontal_mask,
     quadrant_mask,
     border_mask,
-    alternate_border_mask
+    quadrant_mask
 )
 
 
