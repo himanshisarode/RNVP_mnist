@@ -10,7 +10,7 @@ from util import (
     horizontal_mask,
     quadrant_mask,
     border_mask,
-    alternate_border_mask
+    
 )
 
 
@@ -25,7 +25,7 @@ class SpatialMaskType(Enum):
     DIAGONAL = "diagonal"
     QUADRANT = "quadrant"
     BORDER = "border"
-    ALT_BORDER = "alt_border"
+   
 
 
 class ChannelMaskType(Enum):
@@ -146,8 +146,7 @@ class CouplingLayer(nn.Module):
             elif self.spatial_mask_type == SpatialMaskType.BORDER:
                 b = border_mask(h, w, self.reverse_mask, device=x.device)
 
-            elif self.spatial_mask_type == SpatialMaskType.ALT_BORDER:
-                b = alternate_border_mask(h, w, self.reverse_mask, device=x.device)
+            
 
             else:
                 raise ValueError("Unknown spatial mask")
@@ -165,7 +164,7 @@ class CouplingLayer(nn.Module):
                 x = x * torch.exp(-s) - t
             else:
                 x = (x + t) * torch.exp(s)
-                sldj += s.view(s.size(0), -1).sum(-1)
+                sldj += s.reshape(s.size(0), -1).sum(-1)
 
         # =====================
         # CHANNEL MASK CASE
@@ -193,7 +192,7 @@ class CouplingLayer(nn.Module):
                 x_change = x_change * torch.exp(-s) - t
             else:
                 x_change = (x_change + t) * torch.exp(s)
-                sldj += s.view(s.size(0), -1).sum(-1)
+                sldj += s.reshape(s.size(0), -1).sum(-1)
 
             # reconstruct
             if self.channel_mask_type == ChannelMaskType.HALF:
