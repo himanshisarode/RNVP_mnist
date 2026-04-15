@@ -15,10 +15,6 @@ from models.real_nvp.coupling_layer import SpatialMaskType, ChannelMaskType
 from tqdm import tqdm
 
 
-# =========================
-# PARSE MASK PAIRS
-# =========================
-
 def parse_mask_pairs(mask_str):
     pairs = []
     for pair in mask_str.split(","):
@@ -30,18 +26,11 @@ def parse_mask_pairs(mask_str):
     return pairs
 
 
-# =========================
-# MAIN
-# =========================
-
 def main(args):
     device = 'cuda' if torch.cuda.is_available() and len(args.gpu_ids) > 0 else 'cpu'
 
     mask_pairs_list = parse_mask_pairs(args.mask_pairs)
 
-    # =========================
-    # DATA
-    # =========================
     transform = transforms.Compose([
         transforms.Pad(2),
         transforms.ToTensor()
@@ -55,9 +44,6 @@ def main(args):
 
     loss_fn = RealNVPLoss()
 
-    # =========================
-    # LOOP OVER MASK PAIRS
-    # =========================
     all_results = {}
 
     for pair in mask_pairs_list:
@@ -65,13 +51,12 @@ def main(args):
         print(f"Running for mask pair: {pair}")
         print("="*60)
 
-        # fresh model per pair
         net = RealNVP(
             num_scales=2,
             in_channels=1,
             mid_channels=64,
             num_blocks=8,
-            mask_pairs=[pair]   # single pair per run
+            mask_pairs=[pair]
         )
 
         net = net.to(device)
@@ -85,23 +70,48 @@ def main(args):
             lr=args.lr
         )
 
-        best_loss = float('inf')
         epoch_losses = []
 
-        # =========================
-        # TRAIN 20 EPOCHS PER PAIR
-        # =========================
+        os.makedirs('checkpoints', exist_ok=True)
+        os.makedirs('samples', exist_ok=True)
+
         for epoch in range(20):
             train(epoch, net, trainloader, device, optimizer, loss_fn, args.max_grad_norm)
             test_loss = test(epoch, net, testloader, device, loss_fn, args.num_samples)
 
             epoch_losses.append(test_loss)
 
+            # =========================
+            # SAVE CHECKPOINT
+            # =========================
+            state = {
+                'epoch': epoch,
+                'model_state_dict': net.module.state_dict() if isinstance(net, torch.nn.DataParallel) else net.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'test_loss': test_loss,
+            }
+
+            torch.save(state, f'checkpoints/{str(pair)}_epoch_{epoch}.pth')
+
+            # =========================
+            #
+            # =========================
+            samples = sample(net, 10, device)
+
+            grid = torchvision.utils.make_grid(
+                samples,
+                nrow=5,   # 2 rows of 5
+                padding=2,
+                pad_value=255
+            )
+
+            torchvision.utils.save_image(
+                grid,
+                f'samples/{str(pair)}_epoch_{epoch}.png'
+            )
+
         all_results[str(pair)] = epoch_losses
 
-    # =========================
-    # PRINT RESULTS
-    # =========================
     print("\nFINAL RESULTS (Loss vs Epoch):")
     for k, v in all_results.items():
         print(k, ":", v)
@@ -173,19 +183,6 @@ def test(epoch, net, testloader, device, loss_fn, num_samples):
                     bpd=util.bits_per_dim(x, loss_meter.avg)
                 )
                 progress_bar.update(x.size(0))
-
-    # save samples (same as before)
-    images = sample(net, num_samples, device)
-
-    os.makedirs('samples', exist_ok=True)
-    images_concat = torchvision.utils.make_grid(
-        images,
-        nrow=int(num_samples ** 0.5),
-        padding=2,
-        pad_value=255
-    )
-
-    torchvision.utils.save_image(images_concat, f'samples/epoch_{epoch}.png')
 
     return loss_meter.avg
 
