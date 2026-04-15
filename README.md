@@ -1,1 +1,0 @@
-# RNVP_mnist

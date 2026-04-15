@@ -103,3 +103,65 @@ def checkerboard_mask(height, width, reverse=False, dtype=torch.float32,
     mask = mask.reshape(1, 1, height, width)
 
     return mask
+
+
+def diagonal_mask(height, width, reverse=False, dtype=torch.float32,
+                  device=None, requires_grad=False):
+
+    diag = [[1 if i > j else 0 for j in range(width)] for i in range(height)]
+    mask = torch.tensor(diag, dtype=dtype, device=device, requires_grad=requires_grad)
+
+    if reverse:
+        mask = 1 - mask
+
+    return mask.reshape(1, 1, height, width)
+
+def vertical_mask(height, width, reverse=False, dtype=torch.float32,
+                  device=None, requires_grad=False):
+
+    vert = [[j % 2 for j in range(width)] for _ in range(height)]
+    mask = torch.tensor(vert, dtype=dtype, device=device, requires_grad=requires_grad)
+
+    if reverse:
+        mask = 1 - mask
+
+    return mask.reshape(1, 1, height, width)
+
+def horizontal_mask(height, width, reverse=False, dtype=torch.float32,
+                    device=None, requires_grad=False):
+
+    horiz = [[i % 2 for _ in range(width)] for i in range(height)]
+    mask = torch.tensor(horiz, dtype=dtype, device=device, requires_grad=requires_grad)
+
+    if reverse:
+        mask = 1 - mask
+
+    return mask.reshape(1, 1, height, width)
+
+def diagonal_mask(height, width, reverse=False, dtype=torch.float32,
+                  device=None, requires_grad=False):
+
+    diag = [[1 if i > j else 0 for j in range(width)] for i in range(height)]
+    mask = torch.tensor(diag, dtype=dtype, device=device, requires_grad=requires_grad)
+
+    if reverse:
+        mask = 1 - mask
+
+    return mask.reshape(1, 1, height, width)
+
+def border_mask(height, width, reverse=False, dtype=torch.float32,
+                device=None, requires_grad=False):
+
+    border = [[0 for _ in range(width)] for _ in range(height)]
+
+    for i in range(height):
+        for j in range(width):
+            if i == 0 or i == height - 1 or j == 0 or j == width - 1:
+                border[i][j] = 1
+
+    mask = torch.tensor(border, dtype=dtype, device=device, requires_grad=requires_grad)
+
+    if reverse:
+        mask = 1 - mask
+
+    return mask.reshape(1, 1, height, width)
